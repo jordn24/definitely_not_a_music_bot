@@ -1,11 +1,11 @@
-const { Client, Intents, MessageEmbed } = require('discord.js');
+const  discord  = require('discord.js');
 const { prefix } = require('./config.json');
 const { token } = require('./tokens.json');
 const ytdl = require('ytdl-core');
 const yts = require("yt-search");
 
 
-const client = new Client();
+const client = new discord.Client();
 
 const queue = new Map();
 
@@ -13,15 +13,26 @@ client.on('message', async message => {
 
     const serverQueue = queue.get(message.guild.id);
 
-    if (message.content.toLowerCase().includes(prefix + 'play ')){
+    if (message.content.toLowerCase().includes(prefix + 'play ') || message.content.toLowerCase().includes(prefix + 'join ') || 
+    message.content.toLowerCase().includes(prefix + 'p ')
+    ){
         execute(message, serverQueue)
     }
 
-    if (message.content.toLowerCase().includes(prefix + 'stop ')){
-        execute(message, serverQueue)
+    if (message.content.toLowerCase().includes(prefix + 'stop') || message.content.toLowerCase().includes(prefix + 'leave') || message.content.toLowerCase().includes(prefix + 'kick')){
+        stop(message, serverQueue)
+    }
+
+    if (message.content.toLowerCase().includes(prefix + 'skip') || message.content.toLowerCase().includes(prefix + 'fs')){
+        skip(message, serverQueue)
+    }
+
+    if (message.content.toLowerCase().includes(prefix + 'queue') || message.content.toLowerCase().includes(prefix + 'q')){
+        queueShow(message, serverQueue)
     }
 
 });
+
 
 async function execute(message, serverQueue) {
     const args = message.content.split(" ");
@@ -45,7 +56,11 @@ async function execute(message, serverQueue) {
         songInfo = await ytdl.getInfo(args[1]);
     } else {
         const videos = await yts(args.slice(1).join(" "))
-        songInfo = await ytdl.getInfo(videos['all'][0].url);
+        if (videos['all'][0]){
+            songInfo = await ytdl.getInfo(videos['all'][0].url);
+        } else {
+            return message.channel.send("No Results on Youtube...");
+        }
     }
 
     const song = {
@@ -53,7 +68,7 @@ async function execute(message, serverQueue) {
         url: songInfo.videoDetails.video_url
     }
 
-    if (!serverQueue){
+    if (!serverQueue || client.voice.connections.size == 0){
         // Creating the contract for our queue
         const queueContruct = {
             textChannel: message.channel,
@@ -106,5 +121,51 @@ function play(guild, song) {
     dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
     serverQueue.textChannel.send(`Now playing: **${song.title}**`);
   }
+
+function skip(message, serverQueue) {
+if (!message.member.voice.channel)
+    return message.channel.send(
+    "You have to be in a voice channel to stop the music!"
+    );
+if (!serverQueue)
+    return message.channel.send("No song is playing...");
+serverQueue.connection.dispatcher.end();
+}
+
+function stop(message, serverQueue) {
+    if (!message.member.voice.channel)
+      return message.channel.send(
+        "You have to be in a voice channel to stop the music!"
+      );
+    
+    if (!serverQueue)
+      return message.channel.send("No song is playing...");
+      
+    serverQueue.songs = [];
+    serverQueue.connection.dispatcher.end();
+  }
+
+function queueShow(message, serverQueue){
+    var title = message.guild.name + " Queue: "
+    var color = '#0099ff';
+    var fields = [];
+    var position = 0;
+
+    serverQueue['songs'].forEach(element => {
+        position = position + 1
+        fields.push({"name" : position.toString() + ".", "value" : element['title']});
+    });
+
+    const queueEmbed = new discord.MessageEmbed()
+    .setColor(color)
+    .setTitle(title)
+    .addFields(fields)
+    .setFooter(fields.length.toString() + " songs in queue");
+
+    message.channel.send(queueEmbed);
+
+    // message.channel.send(serverQueue);
+}
+  
 
 client.login(token)
