@@ -1,5 +1,4 @@
 const { Client, Intents, MessageEmbed } = require('discord.js');
-const {joinVoiceChannel} = require('@discordjs/voice');
 const { prefix } = require('./config.json');
 const { token } = require('./tokens.json');
 const ytdl = require('ytdl-core');
