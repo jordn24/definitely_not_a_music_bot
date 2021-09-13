@@ -150,17 +150,27 @@ function queueShow(message, serverQueue){
     var color = '#0099ff';
     var fields = [];
     var position = 0;
+    if (serverQueue != null ){
+        var playingNow = serverQueue['songs'][0]['title'];
+        fields.push({"name": "Playing Now: ", "value": playingNow})
+    } else {
+        return message.channel.send("Nothing playing or in queue...")
+    }
+
+    
 
     serverQueue['songs'].forEach(element => {
+        if (position != 0) {
+            fields.push({"name" : position.toString() + ".", "value" : element['title']});
+        }
         position = position + 1
-        fields.push({"name" : position.toString() + ".", "value" : element['title']});
     });
 
     const queueEmbed = new discord.MessageEmbed()
     .setColor(color)
     .setTitle(title)
     .addFields(fields)
-    .setFooter(fields.length.toString() + " songs in queue");
+    .setFooter(fields.length.toString() + " song/s in queue");
 
     message.channel.send(queueEmbed);
 
